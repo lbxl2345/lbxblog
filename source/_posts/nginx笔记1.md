@@ -1,6 +1,6 @@
 ---
 title: nginx笔记1.md
-date: 2016-03-14 17:40:00
+date: 2016-03-11 17:40:00
 tags:
 - server
 - nginx
