@@ -4,5 +4,8 @@ linux中存在有两个缓存，buffer cache是针对设备的缓存，而page c
 但是buffer cache依然是保留的。因为内核依然需要进行block的I/O。由于大部分block表示的是文件数据，因此它们都通过page cache的形式来缓存。但是剩下的小部分数据不是文件：它们是metadata活着原始的block I/O，这一部分依然由buffer cache来保存。  
 linux当中，所有的文件I/O操作，都是通过page cache来实现的。写操作是通过将page cache中对应的页标记为脏页来实现的；读操作是通过从page cache中返回数据来实现的。如果数据还不在cache中，就先把它读到cache里面。  
 如果只是研究一般文件的读写，那么就只需要在意page cache，不用去关心buffer cache。
-### 页高速缓存
-现在我们知道，在linux中，大部分文件都采用了page cache的形式来进行缓存。但是块设备的读写，却是以块的形式来进行的。前面有提到，page cache通常以4kb为单位，而buffer cache则是
+### 关系
+现在我们知道，在linux中，大部分文件都采用了page cache的形式来进行缓存。但是块设备的读写，却是以块的形式来进行的。前面有提到，page cache通常以4kb为单位，而buffer cache则通常是512B的。实际上，一个或多个buffer cache组成了一个page cache。  
+![page&buffer](https://raw.githubusercontent.com/lbxl2345/blogbackup/master/source/pics/%E7%A3%81%E7%9B%98IO/cache.jpg)
+linux支持的文件系统，大多以块的形式组织文件。在文件以块的形式调入内存后，就以buffer cache的形式，对它们进行管理。buffer cache由两个部分组成，分别是缓冲区的首部buffer_head，和实际的缓冲区内容。buffer_head中，有一个指向数据的指针，和一个缓冲区长度的字段，这两个部分并不相邻。每当以块的形式，将数据读入内存时，它就要被存储在一个缓冲区当中，而buffer_head则起到一个描述符的作用。  
+在从块设备中读某个文件页的时候，会先将一个页面分割为多个块，然后构造bio来进行处理。随后数据就以bio的形式被读取出来，然后
