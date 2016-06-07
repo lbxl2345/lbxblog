@@ -82,5 +82,46 @@ align是对齐的力度
 qiov是经过对齐处理后的io vector  
 然后调用了bdrv_co_readv回调函数，对于raw格式来说，这个回调函数是bdrv_co_readv_em->bdrv_co_io_em，然后进一步调用回调函数bdrv_aio_readv，对于raw格式来说，它是raw_aio_readv，在这个函数中通过QEMU_AIO_READ调用了raw_aio_submit。它会把请求发给AIO去处理了。      
 
+buffer_head.h中，buffer_head结构体，包含了sector_t b_blocknr，也即start block number。  
+	
+	//buffer.c,函数submit_bh_wbc中
+	bio->bi_iter.bi_sector = bh->b_blocknr * (bh->b_size >>9 )
 
-    
+	//此处skip是sector编号，是由block * 8计算得到的
+	sudo dd if=/dev/sda1 of=dumptest skip=31406544 bs=512 count=1
+	cat dumptest
+	
+每个ext4文件，都有一棵radix tree用于维护这个文件内容的page cache，对块设备上的数据进行cache维护。如果不采用Direct_IO的方式，会先将数据写入page cache。  
+直接IO，在用户缓冲区和磁盘之间，直接传输数据。  
+缓冲IO，读入页面缓存，再将数据复制到用户空间缓冲区。  
+### 从GPA到HVA
+virtqueue_map_sg函数会将vring中scatterlist中提取的信息设置到host中的变量in_sg、out_sg、iov_base。  
+sg是一个iovec结构体。对于vring中的每一个desc，获取desc_pa，这里desc_pa是virng->desc，也就是vring中desc的物理地址。
+这里，放在iov_base中的地址，是Qemu中的虚拟地址，cpu_physical_memory_map将desc里面的gpa，转化到了hva。  
+而in_addr，out_addr保存着的是片段的gpa，每一个VirtQueueElement中，都有两个数组，in_addr和out_addr，保存了in/out对应的片段的起始地址(gpa)，而in_sg和out_sg，则是一个iovec结构体数组。再cpu_physical_memory_map函数中，之前所保存的gpa被转换为了hva。
+
+	virtqueue_map_sg(elem->in_sg, elem->in_addr, elem->in_num, 1);
+	virtqueue_map_sg(elem->out_sg, elem->out_addr, elem->out_num, 0);
+可以看到，elem->in_addr，elem->out_addr，这两个地址，被作为了参数，传入了virtqueue_map_sg中。不妨再看一看这个函数的内部。
+
+	void virtqueue_map_sg(struct iovec *sg, hwaddr *addr,
+    size_t num_sg, int is_write)
+首先是其定义。iovec就是我们要赋值的iovec，其中长度已经在vring_desc_len中计算并赋值过了。iov_base则是在这个函数中具体赋值的。这里addr就是gpa，num_sg是sg的数量，is_write指明了这个io是写还是读。其中，具体对sg中iov_base赋值的是这么一句：
+
+	sg[i].iov_base = cpu_physical_memory_map(addr[i], &len, is_write);
+	
+这里的len，是sg[i].iov_len，也即缓冲区的长度。addr[i]也就是前面的out/in_addr[i]。进入这个函数后：
+
+	void *cpu_physical_memory_map(hwaddr addr,
+                              hwaddr *plen,
+                              int is_write)
+	{
+	    return address_space_map(&address_space_memory, addr, plen, is_write);
+	}
+这里，参数address_space_memory是全局的地址空间。
+
+	void *address_space_map(AddressSpace *as,
+                        hwaddr addr,
+                        hwaddr *plen,
+                        bool is_write)
+这里，参数as是地址空间，也就是内存区。这个函数的注释是：将一个guest物理内存域映射到host的虚拟地址空间中。
