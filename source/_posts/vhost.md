@@ -94,6 +94,7 @@ buffer_head.h中，buffer_head结构体，包含了sector_t b_blocknr，也即st
 每个ext4文件，都有一棵radix tree用于维护这个文件内容的page cache，对块设备上的数据进行cache维护。如果不采用Direct_IO的方式，会先将数据写入page cache。  
 直接IO，在用户缓冲区和磁盘之间，直接传输数据。  
 缓冲IO，读入页面缓存，再将数据复制到用户空间缓冲区。  
+
 ### 从GPA到HVA
 virtqueue_map_sg函数会将vring中scatterlist中提取的信息设置到host中的变量in_sg、out_sg、iov_base。  
 sg是一个iovec结构体。对于vring中的每一个desc，获取desc_pa，这里desc_pa是virng->desc，也就是vring中desc的物理地址。
@@ -125,3 +126,5 @@ sg是一个iovec结构体。对于vring中的每一个desc，获取desc_pa，这
                         hwaddr *plen,
                         bool is_write)
 这里，参数as是地址空间，也就是内存区。这个函数的注释是：将一个guest物理内存域映射到host的虚拟地址空间中。
+
+###
