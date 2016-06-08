@@ -15,3 +15,5 @@ linux支持的文件系统，大多以块的形式组织文件。在文件以块
 
 ### 页高速缓存到用户空间
 
+![read](https://raw.githubusercontent.com/lbxl2345/blogbackup/master/source/pics/%E7%A3%81%E7%9B%98IO/read.png)
+![read]()
