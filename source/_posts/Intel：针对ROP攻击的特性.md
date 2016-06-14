@@ -1,9 +1,10 @@
 ---
-title: Intel:针对ROP攻击的新硬件特性(一)
+title: Intel:针对ROP攻击的新硬件特性
 date: 2016-06-13 17:40:00
 tags:
 - linux
-- I/O
+- intel
+- 硬件
 
 ---
 ### 1 针对ROP/JOP/COP的intel特性
@@ -77,4 +78,5 @@ INT3在WAIT_FOR_ENDBRANCH中被特别处理。INT3的出现不会将tracker移�
 
 ##### 3.5 与遗留系统兼容
 启用了CET的程序在满足条件的情况下，能够对遗留系统保持兼容性。首先，通过设置LEG_IW_EN位，可以开启遗留系统的兼容选项；其次，控制流的转移通过indirect call/jmp到non-endbranch的形式实现；第三，legacy code page bitmap被设置成指明目标控制流是遗留代码页。  
-其中，legacy code page bitmap是一个程序内存中的数据结构，用来给硬件决定一个控制流转移是否是到遗留代码页的。
+其中，legacy code page bitmap是一个程序内存中的数据结构，用来给硬件决定一个控制流转移是否是到遗留代码页的。这个bitmap的地址由EB_LEG_BITMAP_BASE，bitmap中的每个bit代表了线性内存中的一个4k页。如果bit是1，说明对应的代码页是遗留的代码页，否则它是一个启用了CET的代码页。线性地址的bits 31:12被用作这个bitmap的索引。
+
