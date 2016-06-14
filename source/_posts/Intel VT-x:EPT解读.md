@@ -6,4 +6,10 @@ non-root:Guest执行的VMX non-root操作
 VM Entry:转换到VMX non-root操作  
 VM Exit:从VMX non-root操作转换到VMX root操作  
 实际上，这个操作过程也就是VMM和虚拟机之间的转换过程。VMCS是一个用来管理VMX non-root操作和VMX转换的数据结构。它由VMM配置，指定guest OS状态，并在VM exits发生时进行控制。  
+![VMCS](https://raw.githubusercontent.com/lbxl2345/blogbackup/master/source/pics/VT-x/VMCS.png)
+### 2 MMU虚拟化
+第一代VT-x在每次VMX转换都会进行TLB冲洗，这会造成在所有VM exits和大部分VM entries时的性能流失，因此对TLB清洗必须有更好的VMM软件控制。VPID(virtual Processor Identifier)是VMCS中的一个16bit域，它用来缓存线性翻译的结果。VPID启动时，就不需要冲洗TLB，不同虚拟机的TLB项能在TLB中共存。  
+既往的VMM维持一个shadow page table，将guest的virtual pages，直接映射到machine pages。同时，guest中的V->P表，与VMM中V->M shadow page table同步。为了维持guest page table和shadow page table之间的关系，会因为VMM traps造成额外的代价，每次切换都会丢失性能，并且为了复制guest page table，在内存上也会有额外花费。
+### 3 EPT(Extended Page Table)
+EPT这样的硬件支持(在AMD架构中类似的技术是NPT，nested page table)能够有效解决传统shadow page table的花销问题。在KVM最新的内存虚拟化技术中，采用了两级页表映射。第一级页表，客户虚拟机采用的是传统操作系统的页表，也即guest page table，记录着客户机虚拟地址(GVA)到客户机物理地址(GPA)的映射。而在KVM中，维护的第二级页表是extended page table(EPT)，记录的是虚拟机物理地址(GPA)到宿主机物理地址(HPA)的映射。  
 
