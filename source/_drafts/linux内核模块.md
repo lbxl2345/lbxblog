@@ -30,4 +30,4 @@
 	clean:
 		rm -rf *.o *.mod.c *.mod.o *.ko
 	endif
-	
+
